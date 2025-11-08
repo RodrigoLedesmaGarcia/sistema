@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: sistema-usuario
+  datasource:
+    url: jdbc:mysql://localhost:3306/migracion_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: 12345
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQLDialect
+    generate-ddl: true
+
+server:
+  port: 8090
+
+logging:
+  level:
+    org:
+      hibernate:
+        SQL: debug
