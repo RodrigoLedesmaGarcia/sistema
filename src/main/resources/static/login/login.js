@@ -6,7 +6,6 @@ async function login() {
     const btnText = document.getElementById("btnText");
     const btnSpinner = document.getElementById("btnSpinner");
 
-    // Oculta mensajes previos
     message.style.display = 'none';
     message.className = 'alert';
 
@@ -15,13 +14,11 @@ async function login() {
         return;
     }
 
-    // Cambia estado del botón
     loginBtn.disabled = true;
     btnText.textContent = 'Verificando...';
     btnSpinner.style.display = 'inline-block';
 
     try {
-        // Enviar usuario y contraseña normales (no en Base64)
         const response = await fetch("/api/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -31,21 +28,23 @@ async function login() {
         const data = await response.json();
 
         if (response.ok && data.success) {
+            // Guardar token JWT
+            localStorage.setItem("token", data.token);
+
             showMessage(`${data.message}`, 'success');
 
-            // Redirigir al formulario de clientes
+            // Redirigir después de un breve delay
             setTimeout(() => {
                 window.location.href = data.redirect || "/clientes/nuevo";
-            }, 1200);
+            }, 1000);
         } else {
-            showMessage(`${data.message || "Credenciales inválidas"}`, 'danger');
+            showMessage(data.message || "Credenciales inválidas", 'danger');
         }
 
     } catch (error) {
         console.error('❌ Error:', error);
         showMessage("Error al conectar con el servidor.", 'danger');
     } finally {
-        // Restaurar botón
         loginBtn.disabled = false;
         btnText.textContent = 'Acceder';
         btnSpinner.style.display = 'none';
@@ -58,11 +57,3 @@ function showMessage(text, type) {
     message.className = `alert alert-${type}`;
     message.style.display = 'block';
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('input').forEach(input => {
-        input.addEventListener('keypress', e => {
-            if (e.key === 'Enter') login();
-        });
-    });
-});

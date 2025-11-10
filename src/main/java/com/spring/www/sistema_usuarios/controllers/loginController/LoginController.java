@@ -1,7 +1,8 @@
 package com.spring.www.sistema_usuarios.controllers.loginController;
 
 import com.spring.www.sistema_usuarios.repositories.loginRepository.UsuarioLoginRepository;
-import jakarta.servlet.http.HttpSession;
+
+import com.spring.www.sistema_usuarios.services.implementaciones.JwtService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -9,15 +10,16 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Base64;
 import java.util.Map;
 
-
 @Controller
 @RequestMapping("/api")
 public class LoginController {
 
     private final UsuarioLoginRepository usuarioLoginRepository;
+    private final JwtService jwtService;
 
-    public LoginController(UsuarioLoginRepository usuarioLoginRepository) {
+    public LoginController(UsuarioLoginRepository usuarioLoginRepository, JwtService jwtService) {
         this.usuarioLoginRepository = usuarioLoginRepository;
+        this.jwtService = jwtService;
     }
 
     @GetMapping("/login")
@@ -27,24 +29,25 @@ public class LoginController {
 
     @PostMapping("/login")
     @ResponseBody
-    public ResponseEntity<?> login(@RequestBody Map<String, String> body, HttpSession session) {
+    public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
         try {
-
             String username = body.get("username").trim();
             String password = body.get("password").trim();
 
-
+            // codificados en base64 (manteniendo tu lógica)
             String usernameEncoded = Base64.getEncoder().encodeToString(username.getBytes());
             String passwordEncoded = Base64.getEncoder().encodeToString(password.getBytes());
 
             var usuarioLogin = usuarioLoginRepository.findByUsernameAndPassword(usernameEncoded, passwordEncoded);
 
             if (usuarioLogin.isPresent()) {
-                // 4️⃣ Guardamos la sesión y redirigimos al formulario de clientes
-                session.setAttribute("usuario", usuarioLogin.get().getUsername());
+                // Genera el token JWT
+                String token = jwtService.generarToken(usuarioLogin.get().getUsername());
+
                 return ResponseEntity.ok(Map.of(
                         "success", true,
                         "message", "Inicio de sesión exitoso",
+                        "token", token,
                         "redirect", "/clientes/nuevo"
                 ));
             } else {
