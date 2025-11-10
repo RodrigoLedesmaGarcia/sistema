@@ -1,45 +1,67 @@
 package com.spring.www.sistema_usuarios.controllers.clienteController;
 
-import com.spring.www.sistema_usuarios.entities.clienteEntity.Cliente;
-import com.spring.www.sistema_usuarios.services.implementaciones.ClienteServiceImpl;
+import com.spring.www.sistema_usuarios.repositories.loginRepository.UsuarioLoginRepository;
+import com.spring.www.sistema_usuarios.services.implementaciones.JwtService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Base64;
+import java.util.Map;
+
 @Controller
-@RequestMapping("/clientes")
-public class ClienteController {
+@RequestMapping("/api")
+public class LoginController {
 
-    private final ClienteServiceImpl service;
+    private final UsuarioLoginRepository usuarioLoginRepository;
+    private final JwtService jwtService;
 
-    ClienteController(ClienteServiceImpl service) {
-        this.service = service;
+    public LoginController(UsuarioLoginRepository usuarioLoginRepository, JwtService jwtService) {
+        this.usuarioLoginRepository = usuarioLoginRepository;
+        this.jwtService = jwtService;
     }
 
-
-    @GetMapping
-    public String listarClientes(Model model) {
-        model.addAttribute("clientes", service.listado());
-        return "clientes/lista";
+    @GetMapping("/login")
+    public String mostrarLogin() {
+        return "login/login";
     }
 
+    @PostMapping("/login")
+    @ResponseBody
+    public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
+        try {
+            String username = body.get("username").trim();
+            String password = body.get("password").trim();
 
-    @GetMapping("/nuevo")
-    public String mostrarFormulario(Model model) {
-        model.addAttribute("cliente", new Cliente());
-        return "clientes/formulario";
-    }
+            // codificados en base64 (manteniendo tu lógica)
+            String usernameEncoded = Base64.getEncoder().encodeToString(username.getBytes());
+            String passwordEncoded = Base64.getEncoder().encodeToString(password.getBytes());
 
-    @PostMapping("/guardar")
-    public String guardarCliente(@ModelAttribute Cliente cliente) {
-        service.crearCliente(cliente);
-        return "redirect:/clientes";
-    }
+            var usuarioLogin = usuarioLoginRepository.findByUsernameAndPassword(usernameEncoded, passwordEncoded);
 
+            if (usuarioLogin.isPresent()) {
+                // Genera el token JWT
+                String token = jwtService.generarToken(usuarioLogin.get().getUsername());
 
-    @GetMapping("/eliminar/{id}")
-    public String eliminarCliente(@PathVariable Long id) {
-        service.eliminarCliente(id);
-        return "redirect:/clientes";
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "message", "Inicio de sesión exitoso",
+                        "token", token,
+                        "redirect", "/clientes/nuevo"
+                ));
+            } else {
+                return ResponseEntity.status(401).body(Map.of(
+                        "success", false,
+                        "message", "Credenciales inválidas"
+                ));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Error interno del servidor"
+            ));
+        }
     }
 }
